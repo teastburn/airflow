@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import warnings
 
 import boto
-from boto.s3.connection import S3Connection
+from boto.s3.connection import S3Connection, OrdinaryCallingFormat
 from boto.sts import STSConnection
 boto.set_stream_logger('boto')
 logging.getLogger("boto").setLevel(logging.INFO)
@@ -158,12 +158,15 @@ class S3Hook(BaseHook):
             connection = S3Connection(
                 aws_access_key_id=creds.access_key,
                 aws_secret_access_key=creds.secret_key,
-                security_token=creds.session_token
+                security_token=creds.session_token,
+                calling_format=OrdinaryCallingFormat()
                 )
         else:
             connection = S3Connection(aws_access_key_id=a_key,
                                       aws_secret_access_key=s_key,
-                                      profile_name=self.profile)
+                                      profile_name=self.profile,
+                                      calling_format=OrdinaryCallingFormat()
+                                      )
         return connection
 
     def check_for_bucket(self, bucket_name):
