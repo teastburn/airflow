@@ -102,6 +102,11 @@ class S3Hook(BaseHook):
                              ":role/" +
                              self.extra_params['aws_iam_role'])
         self.connection = self.get_conn()
+        # Support for alternate calling_formats
+        if self.extra_params['calling_format']:
+            self.calling_format = self.extra_params['calling_format']
+        else:
+            self.calling_format = 'DefaultCallingFormat'
 
     def __getstate__(self):
         pickled_dict = dict(self.__dict__)
@@ -159,13 +164,13 @@ class S3Hook(BaseHook):
                 aws_access_key_id=creds.access_key,
                 aws_secret_access_key=creds.secret_key,
                 security_token=creds.session_token,
-                calling_format=OrdinaryCallingFormat()
+                calling_format=self.calling_format
                 )
         else:
             connection = S3Connection(aws_access_key_id=a_key,
                                       aws_secret_access_key=s_key,
                                       profile_name=self.profile,
-                                      calling_format=OrdinaryCallingFormat()
+                                      calling_format=self.calling_format
                                       )
         return connection
 
