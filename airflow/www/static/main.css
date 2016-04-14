@@ -66,16 +66,16 @@ div.squares{
 div.task_row{
 }
 span.success{
-    background-color: green;
+    background-color: forestgreen;
 }
 span.up_for_retry{
-    background-color: gold;
+    background-color: violet;
 }
 span.started{
     background-color: lime;
 }
 span.error{
-    background-color: red;
+    background-color: darkred;
 }
 span.queued{
     background-color: gray;
