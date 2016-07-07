@@ -24,6 +24,7 @@ from itertools import product
 import getpass
 import logging
 import socket
+import os
 import subprocess
 import multiprocessing
 import math
@@ -81,7 +82,8 @@ class BaseJob(Base, LoggingMixin):
             executor=executors.DEFAULT_EXECUTOR,
             heartrate=conf.getfloat('scheduler', 'JOB_HEARTBEAT_SEC'),
             *args, **kwargs):
-        self.hostname = socket.gethostname()
+        # self.hostname = socket.gethostname()
+        self.hostname = os.environ.get('DATAFLOW_VERSION', 'Unknown')
         self.executor = executor
         self.executor_class = executor.__class__.__name__
         self.start_date = datetime.now()
