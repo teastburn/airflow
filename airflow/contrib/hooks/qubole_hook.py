@@ -68,6 +68,9 @@ class QuboleHook(BaseHook):
         if self.cmd.status != 'done':
             raise AirflowException('Command Id: {0} failed with Status: {1}'.format(self.cmd.id, self.cmd.status))
 
+	if context['task_instance'].xcom_pull(task_ids=self.task_id, key='qbol_cmd_id') is None:
+            raise AirflowException('Command Id: {0} not found in xcom'.format(self.cmd.id))
+
 
     def kill(self, ti):
         """
