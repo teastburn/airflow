@@ -1136,7 +1136,6 @@ class TaskInstance(Base):
         self.test_mode = test_mode
         self.force = force
         self.refresh_from_db(session=session, lock_for_update=True)
-        self.clear_xcom_data()
         self.job_id = job_id
         iso = datetime.now().isoformat()
         self.hostname = socket.gethostname()
@@ -1168,6 +1167,7 @@ class TaskInstance(Base):
         elif force or self.state in State.runnable():
             HR = "\n" + ("-" * 80) + "\n"  # Line break
 
+            self.clear_xcom_data()
             # For reporting purposes, we report based on 1-indexed,
             # not 0-indexed lists (i.e. Attempt 1 instead of
             # Attempt 0 for the first attempt).
