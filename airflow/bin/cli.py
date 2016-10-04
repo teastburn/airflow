@@ -486,7 +486,7 @@ def run(args, dag=None):
         remote_log_location = filename.replace(log_base, remote_base)
         # S3
         if remote_base.startswith('s3:/'):
-            logging_utils.S3Log().write(log, remote_log_location)
+            logging_utils.S3Log().write(log, remote_log_location, append=True)
         # GCS
         elif remote_base.startswith('gs:/'):
             logging_utils.GCSLog().write(log, remote_log_location)
