@@ -50,7 +50,7 @@ class BaseHook(object):
         else:
             conn = random.choice(cls.get_connections(conn_id))
         if conn.host:
-            logging.info("Using connection to: " + conn.host)
+            logging.debug("Using connection to: " + conn.host)
         return conn
 
     @classmethod
