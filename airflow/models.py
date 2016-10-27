@@ -414,7 +414,7 @@ class DagBag(LoggingMixin):
             'dagbag_import_errors', len(self.import_errors), 1)
 
     def deactivate_inactive_dags(self):
-        active_dag_ids = [dag.dag_id for dag in list(self.dags.values())]
+        active_dag_ids = [dag.dag_id for dag in list(self.dags.values()) if dag.full_filepath.startswith(self.dag_folder)]
         session = settings.Session()
         for dag in session.query(
                 DagModel).filter(~DagModel.dag_id.in_(active_dag_ids)).all():
