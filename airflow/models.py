@@ -419,6 +419,7 @@ class DagBag(LoggingMixin):
         for dag in session.query(
                 DagModel).filter(~DagModel.dag_id.in_(active_dag_ids)).all():
             if dag.fileloc.startswith(self.dag_folder):
+                logging.info('Deactivating {}'.format(dag.dag_id))
                 dag.is_active = False
             session.merge(dag)
         session.commit()
