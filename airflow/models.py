@@ -457,11 +457,12 @@ class DagBag(BaseDagBag, LoggingMixin):
         )
 
     def deactivate_inactive_dags(self):
-        active_dag_ids = [dag.dag_id for dag in list(self.dags.values()) if dag.full_filepath.startswith(self.dag_folder)]
+        active_dag_ids = [dag.dag_id for dag in list(self.dags.values())]
         session = settings.Session()
         for dag in session.query(
                 DagModel).filter(~DagModel.dag_id.in_(active_dag_ids)).all():
-            dag.is_active = False
+            if dag.fileloc.startswith(self.dag_folder):
+                dag.is_active = False
             session.merge(dag)
         session.commit()
         session.close()
