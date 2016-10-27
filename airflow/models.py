@@ -418,7 +418,8 @@ class DagBag(LoggingMixin):
         session = settings.Session()
         for dag in session.query(
                 DagModel).filter(~DagModel.dag_id.in_(active_dag_ids)).all():
-            dag.is_active = False
+            if dag.full_filepath.startswith(self.dag_folder):
+                dag.is_active = False
             session.merge(dag)
         session.commit()
         session.close()
