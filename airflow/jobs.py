@@ -565,9 +565,11 @@ class SchedulerJob(BaseJob):
 
         pools = {p.pool: p for p in session.query(models.Pool).all()}
         TI = models.TaskInstance
+        dag_folder_dags = (session.query(models.DagModel).filter(models.DagModel.fileloc.startswith(dagbag.dag_folder + '/')).all())
         queued_tis = (
             session.query(TI)
             .filter(TI.state == State.QUEUED)
+            .filter(TI.dag_id.in_([dag.dag_id for dag in dag_folder_dags]))
             .all()
         )
         self.logger.info(
