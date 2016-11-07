@@ -1656,6 +1656,7 @@ class TaskInstance(Base):
             task_ids,
             dag_id=None,
             key=XCOM_RETURN_KEY,
+            execution_date=None,
             include_prior_dates=False):
         """
         Pull XComs that optionally meet certain criteria.
@@ -1690,9 +1691,10 @@ class TaskInstance(Base):
         if dag_id is None:
             dag_id = self.dag_id
 
+        execution_date = execution_date if execution_date else self.execution_date
         pull_fn = functools.partial(
             XCom.get_one,
-            execution_date=self.execution_date,
+            execution_date=execution_date,
             key=key,
             dag_id=dag_id,
             include_prior_dates=include_prior_dates)
