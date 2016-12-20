@@ -99,8 +99,9 @@ class QuboleHook(BaseHook):
         args = self.cls.parse(self.create_cmd_args(context))
         self.cmd = self.cls.create(**args)
         context['task_instance'].xcom_push(key='qbol_cmd_id', value=self.cmd.id)
-        logging.info("Qubole command created with Id: %s and Status: %s",
-                     self.cmd.id, self.cmd.status)
+        url_prefix = "https://api.qubole.com/v2/analyze?command_id="
+        logging.info("Qubole command created with Id: {0} and Status: {1}".format(str(self.cmd.id), self.cmd.status))
+        logging.info("Permalink: {0}{1}".format(url_prefix, str(self.cmd.id)))
 
         while not Command.is_done(self.cmd.status):
             time.sleep(Qubole.poll_interval)
