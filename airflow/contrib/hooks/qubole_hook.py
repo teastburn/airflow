@@ -17,7 +17,7 @@ COMMAND_CLASSES = {
     "prestocmd": PrestoCommand,
     "hadoopcmd": HadoopCommand,
     "shellcmd": ShellCommand,
-    "pigcmd":  PigCommand,
+    "pigcmd": PigCommand,
     "sparkcmd": SparkCommand,
     "dbtapquerycmd": DbTapQueryCommand,
     "dbexportcmd": DbExportCommand,
@@ -55,7 +55,9 @@ class QuboleHook(BaseHook):
         args = self.cls.parse(self.args)
         self.cmd = self.cls.create(**args)
         context['task_instance'].xcom_push(key='qbol_cmd_id', value=self.cmd.id)
+        url_prefix = "https://api.qubole.com/v2/analyze?command_id="
         logging.info("Qubole command created with Id: {0} and Status: {1}".format(str(self.cmd.id), self.cmd.status))
+        logging.info("Permalink: {0}{1}".format(url_prefix, str(self.cmd.id)))
 
         while not Command.is_done(self.cmd.status):
             time.sleep(Qubole.poll_interval)
@@ -68,7 +70,7 @@ class QuboleHook(BaseHook):
         if self.cmd.status != 'done':
             raise AirflowException('Command Id: {0} failed with Status: {1}'.format(self.cmd.id, self.cmd.status))
 
-	if context['task_instance'].xcom_pull(task_ids=self.task_id, key='qbol_cmd_id') is None:
+        if context['task_instance'].xcom_pull(task_ids=self.task_id, key='qbol_cmd_id') is None:
             raise AirflowException('Command Id: {0} not found in xcom'.format(self.cmd.id))
 
 
@@ -136,14 +138,14 @@ class QuboleHook(BaseHook):
         cmd_type = self.kwargs['command_type']
         inplace_args = None
 
-        for k,v in self.kwargs.items():
+        for k, v in self.kwargs.items():
             if k in COMMAND_ARGS[cmd_type]:
                 if k in HYPHEN_ARGS:
-                    args.append("--{0}={1}".format(k.replace('_', '-'),v))
+                    args.append("--{0}={1}".format(k.replace('_', '-'), v))
                 elif k in POSITIONAL_ARGS:
                     inplace_args = v
                 else:
-                    args.append("--{0}={1}".format(k,v))
+                    args.append("--{0}={1}".format(k, v))
 
             if k == 'notify' and v is True:
                 args.append("--notify")
