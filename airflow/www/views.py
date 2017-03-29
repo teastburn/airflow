@@ -2236,6 +2236,7 @@ class ConnectionModelView(wwwutils.SuperUserMixin, AirflowModelView):
             ('cloudant', 'IBM Cloudant',),
             ('mssql', 'Microsoft SQL Server'),
             ('mesos_framework-id', 'Mesos Framework ID'),
+            ('smtp', 'SMTP')
         ]
     }
 
