@@ -62,7 +62,7 @@ class QuboleHook(BaseHook):
         while not Command.is_done(self.cmd.status):
             time.sleep(Qubole.poll_interval)
             self.cmd = self.cls.find(self.cmd.id)
-            logging.info("Command Id: {0} and Status: {1}".format(str(self.cmd.id), self.cmd.status))
+            logging.debug("Command Id: {0} and Status: {1}".format(str(self.cmd.id), self.cmd.status))
 
         if self.kwargs.has_key('fetch_logs') and self.kwargs['fetch_logs'] == True:
             logging.info("Logs for Command Id: {0} \n{1}".format(str(self.cmd.id), self.cmd.get_log()))
