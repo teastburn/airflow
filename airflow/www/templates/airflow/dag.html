@@ -109,6 +109,9 @@
           <button id="btn_log" type="button" class="btn btn-primary">
             View Log
           </button>
+          <button id="btn_xcom" type="button" class="btn btn-primary">
+            View XCom
+          </button>
           <hr/>
           <button id="btn_run" type="button" class="btn btn-primary"
             title="Runs a single task instance">
@@ -239,6 +242,14 @@ function updateQueryStringParameter(uri, key, value) {
 
     $("#btn_log").click(function(){
       url = "{{ url_for('airflow.log') }}" +
+        "?task_id=" + task_id +
+        "&dag_id=" + dag_id +
+        "&execution_date=" + execution_date;
+      window.location = url;
+    });
+
+    $("#btn_xcom").click(function(){
+      url = "{{ url_for('airflow.xcom') }}" +
         "?task_id=" + task_id +
         "&dag_id=" + dag_id +
         "&execution_date=" + execution_date;
