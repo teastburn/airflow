@@ -1976,16 +1976,16 @@ class BaseOperator(object):
             *args,
             **kwargs):
 
-        if args or kwargs:
+        # if args or kwargs:
             # TODO remove *args and **kwargs in Airflow 2.0
-            warnings.warn(
-                'Invalid arguments were passed to {c}. Support for '
-                'passing such arguments will be dropped in Airflow 2.0. '
-                'Invalid arguments were:'
-                '\n*args: {a}\n**kwargs: {k}'.format(
-                    c=self.__class__.__name__, a=args, k=kwargs),
-                category=PendingDeprecationWarning
-            )
+            # warnings.warn(
+            #     'Invalid arguments were passed to {c}. Support for '
+            #     'passing such arguments will be dropped in Airflow 2.0. '
+            #     'Invalid arguments were:'
+            #     '\n*args: {a}\n**kwargs: {k}'.format(
+            #         c=self.__class__.__name__, a=args, k=kwargs),
+            #     category=PendingDeprecationWarning
+            # )
 
         validate_key(task_id)
         self.task_id = task_id
