@@ -40,12 +40,12 @@ class ExternalTaskConsecutiveRunSensor(BaseSensorOperator):
             external_dag_id,
             external_task_id,
             allowed_states=None,
-            lookback_delta=timedelta(),
+            lookback_delta=None,
             expected_runs=1,
             *args, **kwargs):
         super(ExternalTaskConsecutiveRunSensor, self).__init__(*args, **kwargs)
         self.allowed_states = allowed_states or [State.SUCCESS]
-        self.lookback_delta = lookback_delta
+        self.lookback_delta = lookback_delta or timedelta()
         self.expected_runs = expected_runs
         self.external_dag_id = external_dag_id
         self.external_task_id = external_task_id
