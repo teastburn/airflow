@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+from datetime import timedelta
+
 from future import standard_library
 
 standard_library.install_aliases()
@@ -38,8 +40,8 @@ class ExternalTaskConsecutiveRunSensor(BaseSensorOperator):
             external_dag_id,
             external_task_id,
             allowed_states=None,
-            lookback_delta=None,
-            expected_runs=None,
+            lookback_delta=timedelta(),
+            expected_runs=1,
             *args, **kwargs):
         super(ExternalTaskConsecutiveRunSensor, self).__init__(*args, **kwargs)
         self.allowed_states = allowed_states or [State.SUCCESS]
