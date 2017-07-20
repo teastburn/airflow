@@ -52,7 +52,7 @@ class ExternalTaskConsecutiveRunSensor(BaseSensorOperator):
 
     def poke(self, context):
         start_dttm = context['execution_date'] - self.lookback_delta
-        end_dttm = context['execution_date']
+        end_dttm = context['execution_date'] + timedelta(seconds=1)
 
         logging.info(
             'Poking for '
