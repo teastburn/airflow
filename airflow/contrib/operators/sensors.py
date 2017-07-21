@@ -49,10 +49,12 @@ class ExternalTaskConsecutiveRunSensor(BaseSensorOperator):
         self.expected_runs = expected_runs
         self.external_dag_id = external_dag_id
         self.external_task_id = external_task_id
+        self.kwargs = kwargs
 
     def poke(self, context):
+        schedule_interval = self.kwargs['dag'].schedule_interval
         start_dttm = context['execution_date'] - self.lookback_delta
-        end_dttm = context['execution_date'] + timedelta(seconds=1)
+        end_dttm = context['execution_date'] + schedule_interval
 
         logging.info(
             'Poking for '
