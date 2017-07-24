@@ -558,6 +558,7 @@ class Connection(Base):
         ('redis', 'Redis',),
         ('wasb', 'Azure Blob Storage'),
         ('databricks', 'Databricks',),
+        ('smtp', 'SMTP')
     ]
 
     def __init__(
