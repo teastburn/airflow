@@ -177,7 +177,10 @@ class QuboleHook(BaseHook):
         args = []
         cmd_type = self.kwargs['command_type']
         inplace_args = None
-        tags = set([self.dag_id, self.task_id, context['run_id']])
+        run_id = context.get('run_id')
+        tags = {self.dag_id, self.task_id}
+        if run_id:
+            tags.add(run_id)
 
         for k, v in self.kwargs.items():
             if k in COMMAND_ARGS[cmd_type]:
