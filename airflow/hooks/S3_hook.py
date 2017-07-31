@@ -161,7 +161,7 @@ class S3Hook(BaseHook):
         """
         if self._default_to_boto:
             return S3Connection(profile_name=self.profile)
-        a_key = s_key = None
+        a_key = s_key = calling_format = s3_host = None
         if self._creds_in_config_file:
             a_key, s_key, calling_format = _parse_s3_config(self.s3_config_file,
                                                 self.s3_config_format,
