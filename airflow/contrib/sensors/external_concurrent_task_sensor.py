@@ -1,16 +1,26 @@
-from __future__ import print_function
-
+# -*- coding: utf-8 -*-
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import logging
 from datetime import timedelta
 
-from future import standard_library
-
-standard_library.install_aliases()
-import logging
+from airflow.models import TaskInstance
 
 from airflow import settings
-from airflow.models import TaskInstance
 from airflow.utils.state import State
+
 from airflow.utils.decorators import apply_defaults
+
 from airflow.operators.sensors import BaseSensorOperator
 
 
@@ -62,15 +72,15 @@ class ExternalTaskConsecutiveRunSensor(BaseSensorOperator):
             '{self.external_task_id} in range '
             '{start_dttm} to {end_dttm} -- '
             'Expecting {self.expected_runs} runs ...'.format(**locals()))
-        TI = TaskInstance
+        ti = TaskInstance
 
         session = settings.Session()
-        count = session.query(TI).filter(
-            TI.dag_id == self.external_dag_id,
-            TI.task_id == self.external_task_id,
-            TI.state.in_(self.allowed_states),
-            TI.execution_date >= start_dttm,
-            TI.execution_date < end_dttm
+        count = session.query(ti).filter(
+            ti.dag_id == self.external_dag_id,
+            ti.task_id == self.external_task_id,
+            ti.state.in_(self.allowed_states),
+            ti.execution_date >= start_dttm,
+            ti.execution_date < end_dttm
         ).count()
         logging.info('Found {count} runs'.format(**locals()))
         session.commit()
