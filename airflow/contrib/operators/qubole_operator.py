@@ -119,7 +119,7 @@ class QuboleOperator(BaseOperator):
                        'db_update_keys', 'export_dir', 'partition_spec', 'qubole_conn_id',
                        'arguments', 'user_program_arguments')
 
-    template_ext = ('.txt',)
+    template_ext = ('.txt', '.sql')
     ui_color = '#3064A1'
     ui_fgcolor = '#fff'
 
