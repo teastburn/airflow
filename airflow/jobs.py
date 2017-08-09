@@ -905,6 +905,7 @@ class SchedulerJob(BaseJob):
                         dep_context=DepContext(flag_upstream_failed=True),
                         session=session):
                     self.logger.debug('Queuing task: {}'.format(ti))
+                    Stats.incr('task_queued.{}'.format(dag.dag_id))
                     queue.append(ti.key)
 
         session.close()
@@ -1173,6 +1174,7 @@ class SchedulerJob(BaseJob):
             dag_run = self.create_dag_run(dag)
             if dag_run:
                 self.logger.info("Created {}".format(dag_run))
+                Stats.incr('created_dagrun.{}'.format(dag.dag_id))
             self._process_task_instances(dag, tis_out)
             self.manage_slas(dag)
 
