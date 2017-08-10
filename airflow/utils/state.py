@@ -59,10 +59,10 @@ class State(object):
     state_color = {
         QUEUED: 'gray',
         RUNNING: 'lime',
-        SUCCESS: 'green',
+        SUCCESS: 'forestgreen',
         SHUTDOWN: 'blue',
-        FAILED: 'red',
-        UP_FOR_RETRY: 'gold',
+        FAILED: 'darkred',
+        UP_FOR_RETRY: 'violet',
         UPSTREAM_FAILED: 'orange',
         SKIPPED: 'pink',
         REMOVED: 'lightgrey',
