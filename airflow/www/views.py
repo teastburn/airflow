@@ -1402,9 +1402,9 @@ class Airflow(BaseView):
 
         chart_height = get_chart_height(dag)
         chart = nvd3.lineChart(
-            name="lineChart", x_is_date=True, height=chart_height, width="1200")
+            name="lineChart", x_is_date=True, x_axis_format='%m/%d %H:%M', height=chart_height, width="1200")
         cum_chart = nvd3.lineChart(
-            name="cumLineChart", x_is_date=True, height=chart_height, width="1200")
+            name="cumLineChart", x_is_date=True, x_axis_format='%m/%d %H:%M', height=chart_height, width="1200")
 
         y = {}
         x = {}
@@ -1497,7 +1497,7 @@ class Airflow(BaseView):
 
         chart_height = get_chart_height(dag)
         chart = nvd3.lineChart(
-            name="lineChart", x_is_date=True, y_axis_format='d', height=chart_height,
+            name="lineChart", x_is_date=True, x_axis_format='%m/%d %H:%M', y_axis_format='d', height=chart_height,
             width="1200")
 
         for task in dag.tasks:
@@ -1561,7 +1561,7 @@ class Airflow(BaseView):
 
         chart_height = get_chart_height(dag)
         chart = nvd3.lineChart(
-            name="lineChart", x_is_date=True, height=chart_height, width="1200")
+            name="lineChart", x_is_date=True, x_axis_format='%m/%d %H:%M', height=chart_height, width="1200")
         y = {}
         x = {}
         for task in dag.tasks:
