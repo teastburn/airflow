@@ -34,8 +34,8 @@ class HiveSnapshotSensor(BaseSensorOperator):
         self.airflow_env=airflow_env
 
     @staticmethod
-    def _sort_list_of_dicts(unordered_dict, key_name, reverse=False):
-        decorated = [(d[key_name], d) for d in unordered_dict]
+    def _sort_list_of_dicts(list_of_dicts, key_name, reverse=False):
+        decorated = [(d[key_name], d) for d in list_of_dicts]
         decorated.sort(reverse=reverse)
         return [d for (k, d) in decorated]
 
