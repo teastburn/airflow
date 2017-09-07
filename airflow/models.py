@@ -349,7 +349,7 @@ class DagBag(BaseDagBag, LoggingMixin):
                     ti.handle_failure("{} killed as zombie".format(ti))
                     self.logger.info(
                         'Marked zombie job {} as failed'.format(ti))
-                    Stats.incr('zombies_killed')
+                    Stats.incr('zombies_killed', tags=['dag_id:{}'.format(dag.dag_id)])
         session.commit()
 
     def bag_dag(self, dag, parent_dag, root_dag):
@@ -1271,7 +1271,7 @@ class TaskInstance(Base):
         self.operator = task.__class__.__name__
 
         if not ignore_all_deps and not ignore_ti_state and self.state == State.SUCCESS:
-            Stats.incr('previously_succeeded', 1, 1)
+            Stats.incr('previously_succeeded', 1, 1, tags=['dag_id:{}'.format(task.dag_id)])
 
         queue_dep_context = DepContext(
             deps=QUEUE_DEPS,
@@ -4236,8 +4236,7 @@ class DagRun(Base):
                 for t in unfinished_tasks)
 
         duration = (datetime.now() - start_dttm).total_seconds() * 1000
-        Stats.timing("dagrun.dependency-check.{}.{}".
-                     format(self.dag_id, self.execution_date), duration)
+        Stats.timing('dagrun.dependency-check', duration, tags=['dag_id:{}'.format(self.dag_id)])
 
         # future: remove the check on adhoc tasks (=active_tasks)
         if len(tis) == len(dag.active_tasks):

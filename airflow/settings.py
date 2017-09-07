@@ -21,6 +21,7 @@ import logging
 import os
 import sys
 
+from datadog import dogstatsd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -28,35 +29,53 @@ from sqlalchemy.pool import NullPool
 from airflow import configuration as conf
 
 
-class DummyStatsLogger(object):
+class BaseStatsLogger(object):
 
     @classmethod
-    def incr(cls, stat, count=1, rate=1):
+    def incr(cls, stat, count=1, rate=1, tags=None):
         pass
 
     @classmethod
-    def decr(cls, stat, count=1, rate=1):
+    def decr(cls, stat, count=1, rate=1, tags=None):
         pass
 
     @classmethod
-    def gauge(cls, stat, value, rate=1, delta=False):
+    def gauge(cls, stat, value, rate=1, delta=False, tags=None):
         pass
 
     @classmethod
-    def timing(cls, stat, dt):
+    def timing(cls, stat, dt, tags=None):
         pass
 
-Stats = DummyStatsLogger
+Stats = BaseStatsLogger
+
+
+class DogStatsWrapper(object):
+    def __init__(self, host, port, prefix):
+        self.stats_client = dogstatsd.DogStatsd(host, port)
+        self.prefix = prefix
+
+    def incr(self, stat, count=1, rate=1, tags=None):
+        self.stats_client.increment('{}.{}'.format(self.prefix, stat), count, sample_rate=rate, tags=tags)
+
+    def decr(self, stat, count=1, rate=1, tags=None):
+        self.stats_client.decrement('{}.{}'.format(self.prefix, stat), count, sample_rate=rate, tags=tags)
+
+    def gauge(self, stat, value, rate=1, delta=False, tags=None):
+        self.stats_client.gauge('{}.{}'.format(self.prefix, stat), value, sample_rate=rate, tags=tags)
+
+    def timing(self, stat, dt, tags=None):
+        self.stats_client.timing('{}.{}'.format(self.prefix, stat), dt, tags=tags)
+
 
 if conf.getboolean('scheduler', 'statsd_on'):
-    from statsd import StatsClient
-    statsd = StatsClient(
+    statsd = DogStatsWrapper(
         host=conf.get('scheduler', 'statsd_host'),
         port=conf.getint('scheduler', 'statsd_port'),
         prefix=conf.get('scheduler', 'statsd_prefix'))
     Stats = statsd
 else:
-    Stats = DummyStatsLogger
+    Stats = BaseStatsLogger
 
 
 HEADER = """\
