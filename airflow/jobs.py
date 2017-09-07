@@ -1079,7 +1079,7 @@ class SchedulerJob(BaseJob):
                                          current_task_concurrency,
                                          task_concurrency_limit))
                 Stats.gauge('dag_concurrency.in_use',
-                            (current_task_concurrency/task_concurrency_limit) * 100,
+                            (float(current_task_concurrency)/task_concurrency_limit) * 100,
                             tags=['dag_id:{}'.format(dag_id)])
                 if current_task_concurrency >= task_concurrency_limit:
                     self.logger.info("Not executing {} since the number "
@@ -1144,7 +1144,7 @@ class SchedulerJob(BaseJob):
 
                 open_slots -= 1
                 if pool:
-                    pool_percent_full = (1 - open_slots / pools[pool].slots) * 100
+                    pool_percent_full = (1 - float(open_slots) / pools[pool].slots) * 100
                     Stats.gauge('pool.in_use', pool_percent_full, tags=['pool:{}'.format(pool)])
                 dag_id_to_possibly_running_task_count[dag_id] += 1
 

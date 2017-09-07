@@ -32,39 +32,39 @@ from airflow import configuration as conf
 class BaseStatsLogger(object):
 
     @classmethod
-    def incr(cls, stat, count=1, rate=1, tags=None):
+    def incr(cls, stat, count=1, rate=1, tags=()):
         pass
 
     @classmethod
-    def decr(cls, stat, count=1, rate=1, tags=None):
+    def decr(cls, stat, count=1, rate=1, tags=()):
         pass
 
     @classmethod
-    def gauge(cls, stat, value, rate=1, delta=False, tags=None):
+    def gauge(cls, stat, value, rate=1, delta=False, tags=()):
         pass
 
     @classmethod
-    def timing(cls, stat, dt, tags=None):
+    def timing(cls, stat, dt, tags=()):
         pass
 
 Stats = BaseStatsLogger
 
 
-class DogStatsWrapper(object):
+class DogStatsWrapper(BaseStatsLogger):
     def __init__(self, host, port, prefix):
         self.stats_client = dogstatsd.DogStatsd(host, port)
         self.prefix = prefix
 
-    def incr(self, stat, count=1, rate=1, tags=None):
+    def incr(self, stat, count=1, rate=1, tags=()):
         self.stats_client.increment('{}.{}'.format(self.prefix, stat), count, sample_rate=rate, tags=tags)
 
-    def decr(self, stat, count=1, rate=1, tags=None):
+    def decr(self, stat, count=1, rate=1, tags=()):
         self.stats_client.decrement('{}.{}'.format(self.prefix, stat), count, sample_rate=rate, tags=tags)
 
-    def gauge(self, stat, value, rate=1, delta=False, tags=None):
+    def gauge(self, stat, value, rate=1, delta=False, tags=()):
         self.stats_client.gauge('{}.{}'.format(self.prefix, stat), value, sample_rate=rate, tags=tags)
 
-    def timing(self, stat, dt, tags=None):
+    def timing(self, stat, dt, tags=()):
         self.stats_client.timing('{}.{}'.format(self.prefix, stat), dt, tags=tags)
 
 
