@@ -17,6 +17,7 @@ from builtins import range
 from airflow import configuration
 from airflow.utils.state import State
 from airflow.utils.logging import LoggingMixin
+from airflow.settings import Stats
 
 PARALLELISM = configuration.getint('core', 'PARALLELISM')
 
@@ -101,8 +102,11 @@ class BaseExecutor(LoggingMixin):
             open_slots = self.parallelism - len(self.running)
 
         self.logger.debug("{} running task instances".format(len(self.running)))
+        Stats.incr('{}.running'.format(self.__class__.__name__), len(self.running))
         self.logger.debug("{} in queue".format(len(self.queued_tasks)))
+        Stats.incr('{}.queued'.format(self.__class__.__name__), len(self.queued_tasks))
         self.logger.debug("{} open slots".format(open_slots))
+        Stats.incr('{}.open_slots'.format(self.__class__.__name__), open_slots)
 
         sorted_queue = sorted(
             [(k, v) for k, v in self.queued_tasks.items()],

@@ -47,6 +47,10 @@ class BaseStatsLogger(object):
     def timing(cls, stat, dt, tags=()):
         pass
 
+    @classmethod
+    def set(cls, stat, value, tags=(), rate=1):
+        pass
+
 Stats = BaseStatsLogger
 
 
@@ -66,6 +70,9 @@ class DogStatsWrapper(BaseStatsLogger):
 
     def timing(self, stat, dt, tags=()):
         self.stats_client.timing('{}.{}'.format(self.prefix, stat), dt, tags=tags)
+
+    def set(self, stat, value, tags=(), rate=1):
+        self.stats_client.set('{}.{}'.format(self.prefix, stat), value, tags=tags, sample_rate=rate)
 
 
 if conf.getboolean('scheduler', 'statsd_on'):
