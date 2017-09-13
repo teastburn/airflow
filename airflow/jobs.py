@@ -44,7 +44,7 @@ from tabulate import tabulate
 from airflow import executors, models, settings
 from airflow import configuration as conf
 from airflow.exceptions import AirflowException
-from airflow.models import DAG, DagRun, DagBag
+from airflow.models import DAG, DagRun
 from airflow.settings import Stats
 from airflow.task_runner import get_task_runner
 from airflow.ti_deps.dep_context import DepContext, QUEUE_DEPS, RUN_DEPS
@@ -602,6 +602,9 @@ class SchedulerJob(BaseJob):
                             dag_id=ti.dag_id,
                             execution_date=dttm,
                             timestamp=ts))
+                        Stats.incr('task_sla_miss', 1, 1, tags=['dag_id:{}'.format(ti.dag_id)])
+                        Stats.incr('task_sla_miss.by_task', 1, 1, tags=['dag_id:{}'.format(ti.dag_id),
+                                                                        'task_id:{}'.format(ti.task_id)])
                     dttm = dag.following_schedule(dttm)
         session.commit()
 
@@ -736,6 +739,8 @@ class SchedulerJob(BaseJob):
                 external_trigger=False,
                 session=session
             )
+            Stats.gauge('dagrun.in_use', float(len(active_runs))/dag.max_active_runs * 100,
+                        tags=['dag_id:{}'.format(dag.dag_id)])
             # return if already reached maximum active runs and no timeout setting
             if len(active_runs) >= dag.max_active_runs and not dag.dagrun_timeout:
                 return
@@ -906,7 +911,7 @@ class SchedulerJob(BaseJob):
                         dep_context=DepContext(flag_upstream_failed=True),
                         session=session):
                     self.logger.debug('Queuing task: {}'.format(ti))
-                    Stats.incr('task_queued', tags=['dag_id:{}'.format(dag.dag_id)])
+                    Stats.incr('scheduler.task_queued', tags=['dag_id:{}'.format(dag.dag_id)])
                     queue.append(ti.key)
 
         session.close()
@@ -1078,6 +1083,7 @@ class SchedulerJob(BaseJob):
                                  .format(dag_id,
                                          current_task_concurrency,
                                          task_concurrency_limit))
+                Stats.gauge('dag_concurrency', current_task_concurrency, tags=['dag_id:{}'.format(dag_id)])
                 Stats.gauge('dag_concurrency.in_use',
                             (float(current_task_concurrency)/task_concurrency_limit) * 100,
                             tags=['dag_id:{}'.format(dag_id)])
@@ -1181,7 +1187,7 @@ class SchedulerJob(BaseJob):
             dag_run = self.create_dag_run(dag)
             if dag_run:
                 self.logger.info("Created {}".format(dag_run))
-                Stats.incr('created_dagrun', tags=['dag_id:{}'.format(dag.dag_id)])
+                Stats.incr('dagrun_created', tags=['dag_id:{}'.format(dag.dag_id)])
             self._process_task_instances(dag, tis_out)
             self.manage_slas(dag)
 
@@ -2107,7 +2113,6 @@ class LocalTaskJob(BaseJob):
         # Keeps track of the fact that the task instance has been observed
         # as running at least once
         self.was_running = False
-        self.dag = DagBag().get_dag(dag_id=task_instance.dag_id)
 
         super(LocalTaskJob, self).__init__(*args, **kwargs)
 
@@ -2123,10 +2128,6 @@ class LocalTaskJob(BaseJob):
 
         try:
             self.task_runner.start()
-            start_dttm = datetime.now()
-            start_lag = (start_dttm - (self.task_instance.execution_date + self.dag.schedule_interval)).total_seconds()
-            Stats.gauge('task_start_lag', start_lag, tags=['dag_id:{}'.format(self.task_instance.dag_id),
-                                                           'task_id:{}'.format(self.task_instance.task_id)])
 
             if self.pool:
                 Stats.incr('pool', tags=['pool:{}'.format(self.pool),
@@ -2141,19 +2142,11 @@ class LocalTaskJob(BaseJob):
                 if return_code is not None:
                     self.logger.info("Task exited with return code {}"
                                      .format(return_code))
-                    duration = (datetime.now() - start_dttm).total_seconds()
-                    Stats.gauge('task_duration',
-                                duration,
-                                tags=['dag_id:{}'.format(self.task_instance.dag_id),
-                                      'task_id:{}'.format(self.task_instance.task_id)])
-
                     return
 
                 # Periodically heartbeat so that the scheduler doesn't think this
                 # is a zombie
                 try:
-                    Stats.incr('task_running', tags=['dag_id:{}'.format(self.task_instance.dag_id),
-                                                     'task_id:{}'.format(self.task_instance.task_id)])
                     self.heartbeat()
                     last_heartbeat_time = time.time()
                 except OperationalError:
@@ -2173,11 +2166,6 @@ class LocalTaskJob(BaseJob):
                                            .format(time_since_last_heartbeat,
                                                    heartbeat_time_limit))
         finally:
-            Stats.gauge('landing_time',
-                        (datetime.now() - (self.task_instance.execution_date + self.dag.schedule_interval)
-                         ).total_seconds(),
-                        tags=['dag_id:{}'.format(self.task_instance.dag_id),
-                              'task_id:{}'.format(self.task_instance.task_id)])
             self.on_kill()
 
     def on_kill(self):
@@ -2207,8 +2195,10 @@ class LocalTaskJob(BaseJob):
         self.task_instance.refresh_from_db()
         ti = self.task_instance
         if ti.state == State.RUNNING:
-            Stats.incr('task_running', 1, 1, tags=['dag_id:{}'.format(self.task_instance.dag_id),
-                                                   'task_id:{}'.format(self.task_instance.task_id)])
+            Stats.incr('task_heartbeat', 1, 1, tags=['dag_id:{}'.format(self.task_instance.dag_id)])
+            Stats.incr('task_heartbeat.by_task', 1, 1,
+                       tags=['dag_id:{}'.format(self.task_instance.dag_id),
+                             'task_id:{}'.format(self.task_instance.task_id)])
             self.was_running = True
             fqdn = socket.getfqdn()
             if fqdn != ti.hostname:
