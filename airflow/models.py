@@ -103,6 +103,28 @@ else:
 _CONTEXT_MANAGER_DAG = None
 
 
+def stats_incr_helper(stat, value, dag_id, task_id):
+    """ helper method to call Stats """
+    Stats.incr(stat, value, 1, tags=['dag_id:{}'.format(dag_id)])
+
+    task_id_entity = '.'.join(task_id.split('.')[:-1])
+    task_id_action = '.'.join(task_id.split('.')[-1:])
+    Stats.incr(stat + '.by_task', value, 1, tags=['dag_id:{}'.format(dag_id),
+                                                  'task_id:{}'.format(task_id_entity),
+                                                  'task_id_action:{}'.format(task_id_action)])
+
+
+def stats_gauge_helper(stat, value, dag_id, task_id):
+    """ helper method to call Stats """
+    Stats.gauge(stat, value, 1, tags=['dag_id:{}'.format(dag_id)])
+
+    task_id_entity = '.'.join(task_id.split('.')[:-1])
+    task_id_action = '.'.join(task_id.split('.')[-1:])
+    Stats.gauge(stat + '.by_task', value, 1, tags=['dag_id:{}'.format(dag_id),
+                                                   'task_id:{}'.format(task_id_entity),
+                                                   'task_id_action:{}'.format(task_id_action)])
+
+
 def clear_task_instances(tis, session, activate_dag_runs=True):
     """
     Clears a set of task instances, but makes sure the running ones
@@ -972,9 +994,7 @@ class TaskInstance(Base):
         Forces the task instance's state to FAILED in the database.
         """
         logging.error("Recording the task instance as FAILED")
-        Stats.incr('task_failed', 1, 1, tags=['dag_id:{}'.format(self.dag_id)])
-        Stats.incr('task_failed.by_task', 1, 1, tags=['dag_id:{}'.format(self.dag_id),
-                                                      'task_id:{}'.format(self.task_id)])
+        stats_incr_helper('task_failed', 1, self.dag_id, self.task_id)
         self.state = State.FAILED
         session.merge(self)
         session.commit()
@@ -1006,6 +1026,7 @@ class TaskInstance(Base):
             self.try_number = ti.try_number
             self.hostname = ti.hostname
             self.pid = ti.pid
+            self.queued_dttm = ti.queued_dttm
         else:
             self.state = None
 
@@ -1029,9 +1050,7 @@ class TaskInstance(Base):
         return self.dag_id, self.task_id, self.execution_date
 
     def set_state(self, state, session):
-        Stats.incr('task_{}'.format(state), 1, 1, tags=['dag_id:{}'.format(self.dag_id)])
-        Stats.incr('task_{}.by_task'.format(state), 1, 1, tags=['dag_id:{}'.format(self.dag_id),
-                                                                'task_id:{}'.format(self.task_id)])
+        stats_incr_helper('task_{}'.format(state), 1, self.dag_id, self.task_id)
         self.state = state
         self.start_date = datetime.now()
         self.end_date = datetime.now()
@@ -1317,9 +1336,7 @@ class TaskInstance(Base):
             # FIXME: we might have hit concurrency limits, which means we probably
             # have been running prematurely. This should be handled in the
             # scheduling mechanism.
-            Stats.incr('task_none', 1, 1, tags=['dag_id:{}'.format(self.dag_id)])
-            Stats.incr('task_none.by_task', 1, 1, tags=['dag_id:{}'.format(self.dag_id),
-                                                        'task_id:{}'.format(self.task_id)])
+            stats_incr_helper('task_none', 1, self.dag_id, self.task_id)
             self.state = State.NONE
             msg = ("FIXME: Rescheduling due to concurrency limits reached at task "
                    "runtime. Attempt {attempt} of {total}. State set to NONE.").format(
@@ -1348,16 +1365,10 @@ class TaskInstance(Base):
 
         if not test_mode:
             session.add(Log(State.RUNNING, self))
-        if self.queued_dttm and self.start_date:
-            queued_time = (self.queued_dttm - self.start_date).total_seconds()
-            Stats.gauge('task_queue_lag', queued_time, tags=['dag_id:{}'.format(self.dag_id)])
-            Stats.gauge('task_queue_lag.by_task', queued_time, tags=['dag_id:{}'.format(self.dag_id),
-                                                                     'task_id:{}'.format(self.task_id)])
         if self.execution_date and self.start_date:
-            start_lag = (self.start_date - self.execution_date).total_seconds()
-            Stats.gauge('task_start_lag', start_lag, tags=['dag_id:{}'.format(self.dag_id)])
-            Stats.gauge('task_start_lag.by_task', start_lag, tags=['dag_id:{}'.format(self.dag_id),
-                                                                   'task_id:{}'.format(self.task_id)])
+            offset = self.task.dag.schedule_interval if self.task.dag.schedule_interval else 0
+            start_lag = (self.start_date - self.execution_date + offset).total_seconds()
+            stats_gauge_helper('task_start_lag', start_lag, self.dag_id, self.task_id)
         self.state = State.RUNNING
         self.pid = os.getpid()
         self.end_date = None
@@ -1402,9 +1413,7 @@ class TaskInstance(Base):
                 result = None
                 if task_copy.execution_timeout:
                     try:
-                        Stats.incr('task_timeout', 1, 1, tags=['dag_id:{}'.format(task.dag_id)])
-                        Stats.incr('task_timeout.by_task', 1, 1, tags=['dag_id:{}'.format(task.dag_id),
-                                                                       'task_id:{}'.format(task.task_id)])
+                        stats_incr_helper('task_timeout', 1, task.dag_id, task_task_id)
                         with timeout(int(
                                 task_copy.execution_timeout.total_seconds())):
                             result = task_copy.execute(context=context)
@@ -1419,14 +1428,10 @@ class TaskInstance(Base):
                     self.xcom_push(key=XCOM_RETURN_KEY, value=result)
 
                 task_copy.post_execute(context=context)
-                Stats.incr('task_success', 1, 1, tags=['dag_id:{}'.format(task.dag_id)])
-                Stats.incr('task_success.by_task', 1, 1, tags=['dag_id:{}'.format(task.dag_id),
-                                                               'task_id:{}'.format(task.task_id)])
+                stats_incr_helper('task_success', 1, task.dag_id, task.task_id)
             self.state = State.SUCCESS
         except AirflowSkipException:
-            Stats.incr('task_skipped', 1, 1, tags=['dag_id:{}'.format(task.dag_id)])
-            Stats.incr('task_skipped.by_task', 1, 1, tags=['dag_id:{}'.format(task.dag_id),
-                                                           'task_id:{}'.format(task.task_id)])
+            stats_incr_helper('task_skipped', 1, task.dag_id, task.task_id)
             self.state = State.SKIPPED
         except (Exception, KeyboardInterrupt) as e:
             self.handle_failure(e, test_mode, context)
@@ -1439,6 +1444,10 @@ class TaskInstance(Base):
             session.add(Log(self.state, self))
             session.merge(self)
         session.commit()
+
+        if self.queued_dttm and self.start_date:
+            queued_time = (self.queued_dttm - self.start_date).total_seconds()
+            stats_gauge_helper('task_queue_lag', queued_time, self.dag_id, self.task_id)
 
         # Success callback
         try:
@@ -1474,17 +1483,13 @@ class TaskInstance(Base):
         # Let's go deeper
         try:
             if task.retries and self.try_number % (task.retries + 1) != 0:
-                Stats.incr('task_up_for_retry', 1, 1, tags=['dag_id:{}'.format(task.dag_id)])
-                Stats.incr('task_up_for_retry.by_task', 1, 1, tags=['dag_id:{}'.format(task.dag_id),
-                                                                    'task_id:{}'.format(task.task_id)])
+                stats_incr_helper('task_up_for_retry', 1, task.dag_id, task.task_id)
                 self.state = State.UP_FOR_RETRY
                 logging.info('Marking task as UP_FOR_RETRY')
                 if task.email_on_retry and task.email:
                     self.email_alert(error, is_retry=True)
             else:
-                Stats.incr('task_failed', 1, 1, tags=['dag_id:{}'.format(task.dag_id)])
-                Stats.incr('task_failed.by_task', 1, 1, tags=['dag_id:{}'.format(task.dag_id),
-                                                              'task_id:{}'.format(task.task_id)])
+                stats_incr_helper('task_failed', 1, task.dag_id, task.task_id)
                 self.state = State.FAILED
                 if task.retries:
                     logging.info('All retries failed; marking task as FAILED')
@@ -1648,9 +1653,7 @@ class TaskInstance(Base):
     def set_duration(self):
         if self.end_date and self.start_date:
             self.duration = (self.end_date - self.start_date).total_seconds()
-            Stats.gauge('task_duration', self.duration, tags=['dag_id:{}'.format(self.dag_id)])
-            Stats.gauge('task_duration.by_task', self.duration, tags=['dag_id:{}'.format(self.dag_id),
-                                                                      'task_id:{}'.format(self.task_id)])
+            stats_gauge_helper('task_duration', self.duration, self.dag_id, self.task_id)
         else:
             self.duration = None
 
@@ -1820,9 +1823,7 @@ class SkipMixin(object):
 
         if dag_run:
             for task in tasks:
-                Stats.incr('task_skipped', 1, 1, tags=['dag_id:{}'.format(task.dag_id)])
-                Stats.incr('task_skipped.by_task', 1, 1, tags=['dag_id:{}'.format(task.dag_id),
-                                                               'task_id:{}'.format(task.task_id)])
+                stats_incr_helper('task_skipped', 1, task.dag_id, task.task_id)
             session.query(TaskInstance).filter(
                 TaskInstance.dag_id == dag_run.dag_id,
                 TaskInstance.execution_date == dag_run.execution_date,
@@ -1839,9 +1840,7 @@ class SkipMixin(object):
             # this is defensive against dag runs that are not complete
             for task in tasks:
                 ti = TaskInstance(task, execution_date=execution_date)
-                Stats.incr('task_skipped', 1, 1, tags=['dag_id:{}'.format(task.dag_id)])
-                Stats.incr('task_skipped.by_task', 1, 1, tags=['dag_id:{}'.format(task.dag_id),
-                                                               'task_id:{}'.format(task.task_id)])
+                stats_incr_helper('task_skipped', 1, task.dag_id, task.task_id)
                 ti.state = State.SKIPPED
                 ti.start_date = now
                 ti.end_date = now
@@ -4330,9 +4329,7 @@ class DagRun(Base):
                 dag.get_task(ti.task_id)
             except AirflowException:
                 if self.state is not State.RUNNING and not dag.partial:
-                    Stats.incr('task_removed', 1, 1, tags=['dag_id:{}'.format(dag.dag_id)])
-                    Stats.incr('task_removed.by_task', 1, 1, tags=['dag_id:{}'.format(dag.dag_id),
-                                                                   'task_id:{}'.format(ti.task_id)])
+                    stats_incr_helper('task_removed', 1, dag.dag_id, ti.task_id)
                     ti.state = State.REMOVED
 
         # check for missing tasks
