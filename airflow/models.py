@@ -1446,7 +1446,7 @@ class TaskInstance(Base):
         session.commit()
 
         if self.queued_dttm and self.start_date:
-            queued_time = (self.queued_dttm - self.start_date).total_seconds()
+            queued_time = (self.start_date - self.queued_dttm).total_seconds()
             stats_gauge_helper('task_queue_lag', queued_time, self.dag_id, self.task_id)
 
         # Success callback
