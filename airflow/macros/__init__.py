@@ -62,6 +62,17 @@ def ds_format(ds, input_format, output_format):
     return datetime.strptime(ds, input_format).strftime(output_format)
 
 
+def ts_epoch(ts):
+    """
+    Given a datetime, return seconds since epoch
+
+    :param ts: the date to convert
+    :type ts: datetime
+
+    """
+    return int((ts - datetime(1970, 1, 1)).total_seconds())
+
+
 def _integrate_plugins():
     """Integrate plugins to the context"""
     import sys

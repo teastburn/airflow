@@ -603,8 +603,11 @@ class SchedulerJob(BaseJob):
                             execution_date=dttm,
                             timestamp=ts))
                         Stats.incr('task_sla_miss', 1, 1, tags=['dag_id:{}'.format(ti.dag_id)])
+                        task_id_entity = '.'.join(ti.task_id.split('.')[:-1])
+                        task_id_action = '.'.join(ti.task_id.split('.')[-1:])
                         Stats.incr('task_sla_miss.by_task', 1, 1, tags=['dag_id:{}'.format(ti.dag_id),
-                                                                        'task_id:{}'.format(ti.task_id)])
+                                                                        'task_id_prefix:{}'.format(task_id_entity),
+                                                                        'task_id_suffix:{}'.format(task_id_action)])
                     dttm = dag.following_schedule(dttm)
         session.commit()
 
@@ -2196,9 +2199,12 @@ class LocalTaskJob(BaseJob):
         ti = self.task_instance
         if ti.state == State.RUNNING:
             Stats.incr('task_heartbeat', 1, 1, tags=['dag_id:{}'.format(self.task_instance.dag_id)])
+            task_id_entity = '.'.join(self.task_instance.task_id.split('.')[:-1])
+            task_id_action = '.'.join(self.task_instance.task_id.split('.')[-1:])
             Stats.incr('task_heartbeat.by_task', 1, 1,
                        tags=['dag_id:{}'.format(self.task_instance.dag_id),
-                             'task_id:{}'.format(self.task_instance.task_id)])
+                             'task_id_prefix:{}'.format(task_id_entity),
+                             'task_id_suffix:{}'.format(task_id_action)])
             self.was_running = True
             fqdn = socket.getfqdn()
             if fqdn != ti.hostname:
