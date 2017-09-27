@@ -1413,7 +1413,7 @@ class TaskInstance(Base):
                 result = None
                 if task_copy.execution_timeout:
                     try:
-                        stats_incr_helper('task_timeout', 1, task.dag_id, task_task_id)
+                        stats_incr_helper('task_timeout', 1, task.dag_id, task.task_id)
                         with timeout(int(
                                 task_copy.execution_timeout.total_seconds())):
                             result = task_copy.execute(context=context)
