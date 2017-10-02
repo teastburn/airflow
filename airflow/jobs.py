@@ -649,7 +649,7 @@ class SchedulerJob(BaseJob):
                 notification_sent = True
             else:
                 email_content = """\
-                Here's a list of tasks thas missed their SLAs:
+                Here's a list of tasks that missed their SLAs:
                 <pre><code>{task_list}\n<code></pre>
                 Blocking tasks:
                 <pre><code>{blocking_task_list}\n{bug}<code></pre>
