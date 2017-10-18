@@ -602,12 +602,6 @@ class SchedulerJob(BaseJob):
                             dag_id=ti.dag_id,
                             execution_date=dttm,
                             timestamp=ts))
-                        Stats.incr('task_sla_miss', 1, 1, tags=['dag_id:{}'.format(ti.dag_id)])
-                        task_id_entity = '.'.join(ti.task_id.split('.')[:-1])
-                        task_id_action = '.'.join(ti.task_id.split('.')[-1:])
-                        Stats.incr('task_sla_miss.by_task', 1, 1, tags=['dag_id:{}'.format(ti.dag_id),
-                                                                        'task_id_prefix:{}'.format(task_id_entity),
-                                                                        'task_id_suffix:{}'.format(task_id_action)])
                     dttm = dag.following_schedule(dttm)
         session.commit()
 
@@ -682,6 +676,13 @@ class SchedulerJob(BaseJob):
                 for sla in slas:
                     if email_sent:
                         sla.email_sent = True
+                    if not sla.notification_sent:
+                        Stats.incr('task_sla_miss', 1, 1, tags=['dag_id:{}'.format(sla.dag_id)])
+                        task_id_entity = '.'.join(sla.task_id.split('.')[:-1])
+                        task_id_action = '.'.join(sla.task_id.split('.')[-1:])
+                        Stats.incr('task_sla_miss.by_task', 1, 1, tags=['dag_id:{}'.format(sla.dag_id),
+                                                                        'task_id_prefix:{}'.format(task_id_entity),
+                                                                        'task_id_suffix:{}'.format(task_id_action)])
                     sla.notification_sent = True
                     session.merge(sla)
             session.commit()
