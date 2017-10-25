@@ -1365,9 +1365,8 @@ class TaskInstance(Base):
 
         if not test_mode:
             session.add(Log(State.RUNNING, self))
-        if self.execution_date and self.start_date:
-            expected_start = self.task.dag.following_schedule(self.execution_date) if self.task.dag.schedule_interval \
-                else timedelta()
+        if self.execution_date and self.start_date and self.task.dag.schedule_interval:
+            expected_start = self.task.dag.following_schedule(self.execution_date)
             start_lag = (self.start_date - expected_start).total_seconds()
             stats_gauge_helper('task_start_lag', start_lag, self.dag_id, self.task_id)
         self.state = State.RUNNING
