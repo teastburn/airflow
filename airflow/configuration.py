@@ -34,10 +34,6 @@ from builtins import str
 from collections import OrderedDict
 from six.moves import configparser
 
-import re
-import boto3
-import base64
-
 from airflow.exceptions import AirflowConfigException
 
 # show Airflow's deprecation warnings
@@ -299,47 +295,6 @@ class AirflowConfigParser(ConfigParser):
         self.read(TEST_CONFIG_FILE)
 
 
-class KmsAirflowConfigParser(AirflowConfigParser):
-    """
-    Looks for KMS[region,ciphertext blob] in options parsed by
-    AirflowConfigParser. If matches are found they are decrypted
-    and replaced within the option value. This allows for multi-value
-    substitutions in things like connection strings.
-    """
-    kms_pattern = re.compile("(KMS\[(\w{2}-\w*-\d),(.*?)\])")
-    option_cache = {}
-
-    def __init__(self, *args, **kwargs):
-        AirflowConfigParser.__init__(self, *args, **kwargs)
-
-    def _decrypt(self, region, ciphertext):
-        client = boto3.client('kms', region_name=region)
-
-        ciphertext_blob = base64.b64decode(ciphertext)
-        resp = client.decrypt(CiphertextBlob=ciphertext_blob)
-
-        return resp.get('Plaintext', None)
-
-    def get(self, section, key, **kwargs):
-        option = AirflowConfigParser.get(self, section, key, **kwargs)
-
-        if option in self.option_cache:
-            return self.option_cache[option]
-
-        output = option
-        for match in self.kms_pattern.finditer(option):
-            g = match.groups()
-            part = g[0]
-            region = g[1]
-            ciphertext = g[2]
-
-            plaintext = self._decrypt(region, ciphertext)
-            output = output.replace(part, plaintext)
-
-        self.option_cache[option] = output
-        return output
-
-
 def mkdir_p(path):
     try:
         os.makedirs(path)
@@ -426,7 +381,7 @@ if not os.path.isfile(AIRFLOW_CONFIG):
 
 logging.info("Reading the config from " + AIRFLOW_CONFIG)
 
-conf = KmsAirflowConfigParser()
+conf = AirflowConfigParser()
 conf.read(AIRFLOW_CONFIG)
 
 
