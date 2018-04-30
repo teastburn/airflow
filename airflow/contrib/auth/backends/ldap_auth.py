@@ -53,6 +53,7 @@ class LdapException(Exception):
 def get_ldap_connection(dn=None, password=None):
     tls_configuration = None
     use_ssl = False
+    search_scope = configuration.get("ldap", "search_scope")
     try:
         cacert = configuration.get("ldap", "cacert")
         tls_configuration = Tls(validate=ssl.CERT_REQUIRED, ca_certs_file=cacert)
@@ -60,7 +61,7 @@ def get_ldap_connection(dn=None, password=None):
     except:
         pass
 
-    server = Server(configuration.get("ldap", "uri"), use_ssl, tls_configuration)
+    server = Server(configuration.get("ldap", "uri"), use_ssl, tls_configuration, get_info=search_scope)
     conn = Connection(server, native(dn), native(password))
 
     if not conn.bind():
