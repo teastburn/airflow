@@ -54,6 +54,7 @@ def get_ldap_connection(dn=None, password=None):
     tls_configuration = None
     use_ssl = False
     search_scope = configuration.get("ldap", "search_scope")
+    
     try:
         cacert = configuration.get("ldap", "cacert")
         tls_configuration = Tls(validate=ssl.CERT_REQUIRED, ca_certs_file=cacert)
