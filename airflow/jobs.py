@@ -608,8 +608,7 @@ class SchedulerJob(BaseJob):
         slas = (
             session
             .query(SlaMiss)
-            .filter(or_(SlaMiss.email_sent == False,
-                        SlaMiss.notification_sent == False))
+            .filter(SlaMiss.notification_sent == False)
             .filter(SlaMiss.dag_id == dag.dag_id)
             .all()
         )
@@ -633,12 +632,12 @@ class SchedulerJob(BaseJob):
                     session.delete(ti)
                     session.commit()
 
-            task_list = "\n".join([
+            task_list = "\n".join(sorted([
                 sla.task_id + ' on ' + sla.execution_date.isoformat()
-                for sla in slas])
-            blocking_task_list = "\n".join([
+                for sla in slas]))
+            blocking_task_list = "\n".join(sorted([
                 ti.task_id + ' on ' + ti.execution_date.isoformat()
-                for ti in blocking_tis])
+                for ti in blocking_tis]))
             # Track whether email or any alert notification sent
             # We consider email or the alert callback as notifications
             email_sent = False
