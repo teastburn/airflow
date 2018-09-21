@@ -55,7 +55,7 @@ from airflow.utils.dag_processing import (AbstractDagFileProcessor,
                                           SimpleDag,
                                           SimpleDagBag,
                                           list_py_file_paths)
-from airflow.utils.email import send_email
+from airflow.utils.email import send_email, get_email_address_list
 from airflow.utils.logging import LoggingMixin
 from airflow.utils import asciiart
 
@@ -608,8 +608,7 @@ class SchedulerJob(BaseJob):
         slas = (
             session
             .query(SlaMiss)
-            .filter(or_(SlaMiss.email_sent == False,
-                        SlaMiss.notification_sent == False))
+            .filter(SlaMiss.notification_sent == False)
             .filter(SlaMiss.dag_id == dag.dag_id)
             .all()
         )
@@ -633,12 +632,12 @@ class SchedulerJob(BaseJob):
                     session.delete(ti)
                     session.commit()
 
-            task_list = "\n".join([
+            task_list = "\n".join(sorted([
                 sla.task_id + ' on ' + sla.execution_date.isoformat()
-                for sla in slas])
-            blocking_task_list = "\n".join([
+                for sla in slas]))
+            blocking_task_list = "\n".join(sorted([
                 ti.task_id + ' on ' + ti.execution_date.isoformat()
-                for ti in blocking_tis])
+                for ti in blocking_tis]))
             # Track whether email or any alert notification sent
             # We consider email or the alert callback as notifications
             email_sent = False
@@ -648,29 +647,27 @@ class SchedulerJob(BaseJob):
                 self.logger.info(' --------------> ABOUT TO CALL SLA MISS CALL BACK ')
                 dag.sla_miss_callback(dag, task_list, blocking_task_list, slas, blocking_tis)
                 notification_sent = True
-            email_content = """\
-            Here's a list of tasks thas missed their SLAs:
-            <pre><code>{task_list}\n<code></pre>
-            Blocking tasks:
-            <pre><code>{blocking_task_list}\n{bug}<code></pre>
-            """.format(bug=asciiart.bug, **locals())
-            emails = []
-            for t in dag.tasks:
-                if t.email:
-                    if isinstance(t.email, basestring):
-                        l = [t.email]
-                    elif isinstance(t.email, (list, tuple)):
-                        l = t.email
-                    for email in l:
-                        if email not in emails:
-                            emails.append(email)
-            if emails and len(slas):
-                send_email(
-                    emails,
-                    "[airflow] SLA miss on DAG=" + dag.dag_id,
-                    email_content)
-                email_sent = True
-                notification_sent = True
+            else:
+                email_content = """\
+                Here's a list of tasks thas missed their SLAs:
+                <pre><code>{task_list}\n<code></pre>
+                Blocking tasks:
+                <pre><code>{blocking_task_list}\n{bug}<code></pre>
+                """.format(bug=asciiart.bug, **locals())
+                emails = set()
+                for task in dag.tasks:
+                    if task.email and task.task_id in [sla.task_id for sla in slas]:
+                        if isinstance(task.email, str):
+                            emails |= set(get_email_address_list(task.email))
+                        elif isinstance(task.email, (list, tuple)):
+                            emails |= set(task.email)
+                if emails and len(slas):
+                    send_email(
+                        emails,
+                        "[airflow] SLA miss on DAG=" + dag.dag_id,
+                        email_content)
+                    email_sent = True
+                    notification_sent = True
             # If we sent any notification, update the sla_miss table
             if notification_sent:
                 for sla in slas:
